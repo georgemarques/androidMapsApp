@@ -1,14 +1,16 @@
 package com.apps.georgemarques.mapsandlocationsample;
 
 import android.location.Location;
-import android.location.LocationListener;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 
 import com.apps.georgemarques.mapsandlocationsample.util.PlayServicesUtil;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
@@ -17,12 +19,12 @@ import com.google.android.gms.maps.model.MarkerOptions;
 public class MapsActivity extends FragmentActivity implements
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
-        LocationListener
+        LocationListener {
 
-{
     private GoogleMap mMap; // Might be null if Google Play services APK is not available.
     private GoogleApiClient mGoogleApiClient;
     private Location mLastLocation;
+    private LocationRequest mLocationRequest;
 
     // Activity Lifecycle
     @Override
@@ -41,8 +43,8 @@ public class MapsActivity extends FragmentActivity implements
                     .build();
 
             setUpMapIfNeeded();
+            createLocationRequest();
         }
-
     }
 
     @Override
@@ -94,14 +96,35 @@ public class MapsActivity extends FragmentActivity implements
      * This should only be called once and when we are sure that {@link #mMap} is not null.
      */
     private void setUpMap() {
-        mMap.addMarker(new MarkerOptions().position(new LatLng(0, 0)).title("Marker"));
+        //mMap.addMarker(new MarkerOptions().position(new LatLng(0, 0)).title("Marker"));
     }
 
+
+    /**
+     * Creating location request object
+     * */
+    protected void createLocationRequest() {
+        mLocationRequest = new LocationRequest();
+        mLocationRequest.setInterval(10000); // 10 sec
+        mLocationRequest.setFastestInterval(5000); // 5 sec
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        mLocationRequest.setSmallestDisplacement(10); // 10 meters
+    }
+
+    protected void startLocationUpdates() {
+        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+
+
+    }
+
+    protected void stopLocationUpdates() {
+        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
+    }
 
     // Callbacks from GoogleApiClient
     @Override
     public void onConnected(Bundle bundle) {
-
+        startLocationUpdates();
     }
 
     @Override
@@ -118,22 +141,16 @@ public class MapsActivity extends FragmentActivity implements
     // Callbacks from LocationListener
     @Override
     public void onLocationChanged(Location location) {
+        mLastLocation = location;
 
+        LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+        MarkerOptions marker = new MarkerOptions()
+                .position(latLng)
+                .title("Estou aqui");
+
+        mMap.addMarker(marker);
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
     }
 
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
 
-    }
-
-    @Override
-    public void onProviderEnabled(String provider) {
-
-    }
-
-    @Override
-    public void onProviderDisabled(String provider) {
-
-    }
-    //*******************************
 }
