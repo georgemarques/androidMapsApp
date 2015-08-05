@@ -1,8 +1,14 @@
 package com.apps.georgemarques.mapsandlocationsample;
 
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
+import android.util.Log;
 
 import com.apps.georgemarques.mapsandlocationsample.util.PlayServicesUtil;
 import com.google.android.gms.common.ConnectionResult;
@@ -21,6 +27,10 @@ public class MapsActivity extends FragmentActivity implements
         GoogleApiClient.OnConnectionFailedListener,
         LocationListener {
 
+    private static final String TAG = "GPM - Maps";
+    private static final int ZOOM_LEVEL = 14;
+    private static final int ZOOM_ANIMATION_DURATION = 2000; // 2 seconds
+
     private GoogleMap mMap; // Might be null if Google Play services APK is not available.
     private GoogleApiClient mGoogleApiClient;
     private Location mLastLocation;
@@ -32,7 +42,6 @@ public class MapsActivity extends FragmentActivity implements
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
-
         if (!PlayServicesUtil.isPlayServiceAvailable(this)){
             PlayServicesUtil.showErrorMessage(this, PlayServicesUtil.REQUEST_CODE_ERROR_PLAY_SERVICES);
         } else{
@@ -41,9 +50,14 @@ public class MapsActivity extends FragmentActivity implements
                     .addOnConnectionFailedListener(this)
                     .addApi(LocationServices.API)
                     .build();
-
+            
+            if (!isGpsEnabled()) {
+                buildAlertMessageNoGps();
+            }
             setUpMapIfNeeded();
             createLocationRequest();
+
+
         }
     }
 
@@ -59,6 +73,33 @@ public class MapsActivity extends FragmentActivity implements
         if (mGoogleApiClient != null){
             mGoogleApiClient.connect();
         }
+    }
+
+
+    private boolean isGpsEnabled(){
+        LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        if (manager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
+            return true;
+        }
+        return false;
+    }
+
+    private void buildAlertMessageNoGps() {
+        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage("Your GPS seems to be disabled, do you want to enable it?")
+                .setCancelable(false)
+                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    public void onClick(@SuppressWarnings("unused") final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
+                        startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                    }
+                })
+                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    public void onClick(final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
+                        dialog.cancel();
+                    }
+                });
+        final AlertDialog alert = builder.create();
+        alert.show();
     }
 
     /**
@@ -141,6 +182,7 @@ public class MapsActivity extends FragmentActivity implements
     // Callbacks from LocationListener
     @Override
     public void onLocationChanged(Location location) {
+        Log.d(TAG, "Location changed to: " + location.toString());
         mLastLocation = location;
 
         LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
@@ -150,6 +192,7 @@ public class MapsActivity extends FragmentActivity implements
 
         mMap.addMarker(marker);
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+        mMap.animateCamera(CameraUpdateFactory.zoomTo(ZOOM_LEVEL), ZOOM_ANIMATION_DURATION, null);
     }
 
 
